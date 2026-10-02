@@ -1,0 +1,141 @@
+{% extends "base.html" %}
+
+{% block title %}Departments - Software Management System{% endblock %}
+{% block page_heading %}Department Management{% endblock %}
+
+{% block content %}
+<div class="card">
+  <!-- Toolbar: Search & Add -->
+  <div class="toolbar-actions">
+    <form action="{{ url_for('departments') }}" method="GET" class="search-form">
+      <input type="text" name="search" class="form-control" placeholder="Search by department name, location, email..." value="{{ search }}">
+      <button type="submit" class="btn btn-primary btn-sm">Search</button>
+      {% if search %}
+        <a href="{{ url_for('departments') }}" class="btn btn-secondary btn-sm">Clear</a>
+      {% endif %}
+    </form>
+    <button type="button" class="btn btn-primary" onclick="openModal('addDeptModal')">
+      ➕ Add Department
+    </button>
+  </div>
+
+  <!-- Departments Table -->
+  <div class="table-responsive">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Department Name</th>
+          <th>Location</th>
+          <th>Contact Email</th>
+          <th>Description</th>
+          <th style="text-align: right;">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% if departments %}
+          {% for d in departments %}
+            <tr>
+              <td><code>#{{ d.Department_ID }}</code></td>
+              <td><strong>{{ d.Department_Name }}</strong></td>
+              <td>{{ d.Location or '-' }}</td>
+              <td>
+                {% if d.Contact_Email %}
+                  <a href="mailto:{{ d.Contact_Email }}" style="color: var(--primary);">{{ d.Contact_Email }}</a>
+                {% else %}
+                  -
+                {% endif %}
+              </td>
+              <td>{{ d.Description or '-' }}</td>
+              <td style="text-align: right;">
+                <div class="action-buttons" style="justify-content: flex-end;">
+                  <button type="button" class="btn btn-secondary btn-sm"
+                          onclick="populateEditDepartment({{ d.Department_ID }}, '{{ d.Department_Name | replace('\'', '\\\'') }}', '{{ (d.Description or '') | replace('\'', '\\\'') }}', '{{ (d.Location or '') | replace('\'', '\\\'') }}', '{{ (d.Contact_Email or '') | replace('\'', '\\\'') }}')">
+                    ✏️ Edit
+                  </button>
+                  <form action="{{ url_for('delete_department', id=d.Department_ID) }}" method="POST" style="display: inline;"
+                        onsubmit="return confirmDelete('Department', '{{ d.Department_Name | replace('\'', '\\\'') }}');">
+                    <button type="submit" class="btn btn-danger btn-sm">🗑️ Delete</button>
+                  </form>
+                </div>
+              </td>
+            </tr>
+          {% endfor %}
+        {% else %}
+          <tr>
+            <td colspan="6" class="empty-state">No departments found. Click "Add Department" to create one.</td>
+          </tr>
+        {% endif %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Modal: Add Department -->
+<div id="addDeptModal" class="modal-overlay">
+  <div class="modal-dialog">
+    <div class="modal-header">
+      <h3>Add New Department</h3>
+      <button type="button" class="modal-close" onclick="closeModal('addDeptModal')">&times;</button>
+    </div>
+    <form action="{{ url_for('add_department') }}" method="POST">
+      <div class="modal-body">
+        <div class="form-group">
+          <label class="form-label" for="add_dept_name">Department Name *</label>
+          <input type="text" id="add_dept_name" name="department_name" class="form-control" required placeholder="e.g. Computer Science & Engineering">
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="add_location">Location / Office</label>
+          <input type="text" id="add_location" name="location" class="form-control" placeholder="e.g. Building 3, Floor 2">
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="add_contact_email">Contact Email</label>
+          <input type="email" id="add_contact_email" name="contact_email" class="form-control" placeholder="e.g. cse.dept@college.edu">
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="add_description">Description</label>
+          <textarea id="add_description" name="description" class="form-control" rows="3" placeholder="Department overview, responsibilities..."></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" onclick="closeModal('addDeptModal')">Cancel</button>
+        <button type="submit" class="btn btn-primary">Save Department</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Modal: Edit Department -->
+<div id="editDeptModal" class="modal-overlay">
+  <div class="modal-dialog">
+    <div class="modal-header">
+      <h3>Edit Department</h3>
+      <button type="button" class="modal-close" onclick="closeModal('editDeptModal')">&times;</button>
+    </div>
+    <form id="editDeptForm" method="POST">
+      <div class="modal-body">
+        <div class="form-group">
+          <label class="form-label" for="edit_dept_name">Department Name *</label>
+          <input type="text" id="edit_dept_name" name="department_name" class="form-control" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="edit_dept_location">Location / Office</label>
+          <input type="text" id="edit_dept_location" name="location" class="form-control">
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="edit_dept_email">Contact Email</label>
+          <input type="email" id="edit_dept_email" name="contact_email" class="form-control">
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="edit_dept_desc">Description</label>
+          <textarea id="edit_dept_desc" name="description" class="form-control" rows="3"></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" onclick="closeModal('editDeptModal')">Cancel</button>
+        <button type="submit" class="btn btn-primary">Update Department</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

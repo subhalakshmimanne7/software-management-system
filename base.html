@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}Software Management System{% endblock %} - DBMS College Project</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+  <div class="app-container">
+    <!-- Sidebar Navigation -->
+    <aside class="sidebar">
+      <div class="sidebar-header">
+        <div class="sidebar-brand-icon">⚡</div>
+        <div class="sidebar-brand-text">
+          <h2>SMS Portal</h2>
+          <p>Software Management</p>
+        </div>
+      </div>
+      
+      <nav class="sidebar-nav">
+        <a href="{{ url_for('dashboard') }}" class="nav-item {% if request.endpoint == 'dashboard' %}active{% endif %}">
+          <span class="icon">📊</span>
+          <span>Dashboard</span>
+        </a>
+
+        <div class="sidebar-nav-label">Core Organization</div>
+        <a href="{{ url_for('departments') }}" class="nav-item {% if request.endpoint == 'departments' %}active{% endif %}">
+          <span class="icon">🏢</span>
+          <span>Departments</span>
+        </a>
+        <a href="{{ url_for('projects') }}" class="nav-item {% if request.endpoint == 'projects' %}active{% endif %}">
+          <span class="icon">📁</span>
+          <span>Projects</span>
+        </a>
+        <a href="{{ url_for('developers') }}" class="nav-item {% if request.endpoint == 'developers' %}active{% endif %}">
+          <span class="icon">👨‍💻</span>
+          <span>Developers</span>
+        </a>
+
+        <div class="sidebar-nav-label">Software Assets</div>
+        <a href="{{ url_for('software') }}" class="nav-item {% if request.endpoint == 'software' %}active{% endif %}">
+          <span class="icon">💻</span>
+          <span>Software</span>
+        </a>
+        <a href="{{ url_for('versions') }}" class="nav-item {% if request.endpoint == 'versions' %}active{% endif %}">
+          <span class="icon">🏷️</span>
+          <span>Versions</span>
+        </a>
+        <a href="{{ url_for('technologies') }}" class="nav-item {% if request.endpoint == 'technologies' %}active{% endif %}">
+          <span class="icon">⚙️</span>
+          <span>Technologies</span>
+        </a>
+        <a href="{{ url_for('licenses') }}" class="nav-item {% if request.endpoint == 'licenses' %}active{% endif %}">
+          <span class="icon">📜</span>
+          <span>Licenses</span>
+        </a>
+
+        <div class="sidebar-nav-label">Quality & Support</div>
+        <a href="{{ url_for('bugs') }}" class="nav-item {% if request.endpoint == 'bugs' %}active{% endif %}">
+          <span class="icon">🐞</span>
+          <span>Bugs</span>
+        </a>
+        <a href="{{ url_for('maintenance') }}" class="nav-item {% if request.endpoint == 'maintenance' %}active{% endif %}">
+          <span class="icon">🛠️</span>
+          <span>Maintenance</span>
+        </a>
+
+        <div class="sidebar-nav-label">Analytics & Access</div>
+        <a href="{{ url_for('reports') }}" class="nav-item {% if request.endpoint == 'reports' %}active{% endif %}">
+          <span class="icon">📈</span>
+          <span>SQL Reports</span>
+        </a>
+        <a href="{{ url_for('users') }}" class="nav-item {% if request.endpoint == 'users' %}active{% endif %}">
+          <span class="icon">👥</span>
+          <span>Users</span>
+        </a>
+      </nav>
+      <div class="sidebar-footer">
+        <div class="sidebar-user">
+          <div class="sidebar-user-info">
+            <strong>{{ logged_user_name }}</strong>
+            <span>{{ logged_user_email }}</span>
+          </div>
+          <a href="{{ url_for('logout') }}" title="Logout" class="btn btn-sm btn-secondary" style="padding: 4px 8px;">🚪</a>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Main Content Area -->
+    <div class="main-wrapper">
+      <header class="top-navbar">
+        <div class="page-title">
+          <h1>{% block page_heading %}Software Management System{% endblock %}</h1>
+        </div>
+        <div class="top-actions">
+          <a href="{{ url_for('logout') }}" class="btn btn-sm btn-secondary">
+            Logout
+          </a>
+        </div>
+      </header>
+
+      <main class="content-container">
+        <!-- Flash Messages -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+          {% if messages %}
+            {% for category, message in messages %}
+              <div class="alert alert-{{ category }}">
+                <span>{{ message }}</span>
+                <button type="button" class="alert-close">&times;</button>
+              </div>
+            {% endfor %}
+          {% endif %}
+        {% endwith %}
+
+        {% block content %}{% endblock %}
+      </main>
+    </div>
+  </div>
+
+  <script src="{{ url_for('static', filename='js/script.js') }}"></script>
+  {% block scripts %}{% endblock %}
+</body>
+</html>
+

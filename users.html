@@ -1,0 +1,131 @@
+{% extends "base.html" %}
+
+{% block title %}Users - Software Management System{% endblock %}
+{% block page_heading %}User Management{% endblock %}
+
+{% block content %}
+<div class="card">
+  <!-- Toolbar: Search & Add -->
+  <div class="toolbar-actions">
+    <form action="{{ url_for('users') }}" method="GET" class="search-form">
+      <input type="text" name="search" class="form-control" placeholder="Search users by name or email..." value="{{ search }}">
+      <button type="submit" class="btn btn-primary btn-sm">Search</button>
+      {% if search %}
+        <a href="{{ url_for('users') }}" class="btn btn-secondary btn-sm">Clear</a>
+      {% endif %}
+    </form>
+    <button type="button" class="btn btn-primary" onclick="openModal('addUserModal')">
+      ➕ Add User
+    </button>
+  </div>
+
+  <!-- Users Table -->
+  <div class="table-responsive">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>User ID</th>
+          <th>Full Name</th>
+          <th>Email Address</th>
+          <th style="text-align: right;">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% if users %}
+          {% for u in users %}
+            <tr>
+              <td><code>#{{ u.User_ID }}</code></td>
+              <td>
+                <strong>{{ u.Name }}</strong>
+                {% if u.User_ID == session.get('user_id') %}
+                  <span class="badge badge-info" style="margin-left: 6px;">You</span>
+                {% endif %}
+              </td>
+              <td><a href="mailto:{{ u.Email }}" style="color: var(--primary);">{{ u.Email }}</a></td>
+              <td style="text-align: right;">
+                <div class="action-buttons" style="justify-content: flex-end;">
+                  <button type="button" class="btn btn-secondary btn-sm"
+                          onclick="populateEditUser({{ u.User_ID }}, '{{ u.Name | replace('\'', '\\\'') }}', '{{ u.Email | replace('\'', '\\\'') }}')">
+                    ✏️ Edit
+                  </button>
+                  {% if u.User_ID != session.get('user_id') %}
+                    <form action="{{ url_for('delete_user', id=u.User_ID) }}" method="POST" style="display: inline;"
+                          onsubmit="return confirmDelete('User Account', '{{ u.Name | replace('\'', '\\\'') }}');">
+                      <button type="submit" class="btn btn-danger btn-sm">🗑️ Delete</button>
+                    </form>
+                  {% endif %}
+                </div>
+              </td>
+            </tr>
+          {% endfor %}
+        {% else %}
+          <tr>
+            <td colspan="4" class="empty-state">No users found. Click "Add User" to register a new system operator.</td>
+          </tr>
+        {% endif %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Modal: Add User -->
+<div id="addUserModal" class="modal-overlay">
+  <div class="modal-dialog">
+    <div class="modal-header">
+      <h3>Add New User</h3>
+      <button type="button" class="modal-close" onclick="closeModal('addUserModal')">&times;</button>
+    </div>
+    <form action="{{ url_for('add_user') }}" method="POST">
+      <div class="modal-body">
+        <div class="form-group">
+          <label class="form-label" for="add_u_name">Full Name *</label>
+          <input type="text" id="add_u_name" name="name" class="form-control" required placeholder="e.g. Aditi Deshmukh">
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="add_u_email">Email Address *</label>
+          <input type="email" id="add_u_email" name="email" class="form-control" required placeholder="e.g. aditi@college.edu">
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="add_u_pwd">Password *</label>
+          <input type="password" id="add_u_pwd" name="password" class="form-control" required placeholder="Minimum 6 characters">
+          <span class="form-text">Password will be securely hashed with Werkzeug security hash before database storage.</span>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" onclick="closeModal('addUserModal')">Cancel</button>
+        <button type="submit" class="btn btn-primary">Save User</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Modal: Edit User -->
+<div id="editUserModal" class="modal-overlay">
+  <div class="modal-dialog">
+    <div class="modal-header">
+      <h3>Edit User Account</h3>
+      <button type="button" class="modal-close" onclick="closeModal('editUserModal')">&times;</button>
+    </div>
+    <form id="editUserForm" method="POST">
+      <div class="modal-body">
+        <div class="form-group">
+          <label class="form-label" for="edit_user_name">Full Name *</label>
+          <input type="text" id="edit_user_name" name="name" class="form-control" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="edit_user_email">Email Address *</label>
+          <input type="email" id="edit_user_email" name="email" class="form-control" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="edit_user_password">New Password (leave empty to keep unchanged)</label>
+          <input type="password" id="edit_user_password" name="password" class="form-control" placeholder="••••••••">
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" onclick="closeModal('editUserModal')">Cancel</button>
+        <button type="submit" class="btn btn-primary">Update User</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

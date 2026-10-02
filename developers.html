@@ -1,0 +1,107 @@
+{% extends "base.html" %}
+
+{% block title %}Developers - Software Management System{% endblock %}
+{% block page_heading %}Developer Management{% endblock %}
+
+{% block content %}
+<div class="card">
+  <div class="toolbar-actions">
+    <form action="{{ url_for('developers') }}" method="GET" class="search-form">
+      <input type="text" name="search" class="form-control" placeholder="Search developers by name or email..." value="{{ search }}">
+      <button type="submit" class="btn btn-primary btn-sm">Search</button>
+      {% if search %}
+        <a href="{{ url_for('developers') }}" class="btn btn-secondary btn-sm">Clear</a>
+      {% endif %}
+    </form>
+    <button type="button" class="btn btn-primary" onclick="openModal('addDeveloperModal')">➕ Add Developer</button>
+  </div>
+
+  <div class="table-responsive">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Developer Name</th>
+          <th>Email</th>
+          <th style="text-align: right;">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% if developers %}
+          {% for d in developers %}
+            <tr>
+              <td><code>#{{ d.Developer_ID }}</code></td>
+              <td><strong>{{ d.Developer_Name }}</strong></td>
+              <td><a href="mailto:{{ d.Email }}" style="color: var(--primary);">{{ d.Email }}</a></td>
+              <td style="text-align: right;">
+                <div class="action-buttons" style="justify-content: flex-end;">
+                  <button type="button" class="btn btn-secondary btn-sm"
+                          onclick="populateEditDeveloper({{ d.Developer_ID }}, '{{ d.Developer_Name | replace('\'', '\\\'') }}', '{{ d.Email | replace('\'', '\\\'') }}')">
+                    ✏️ Edit
+                  </button>
+                  <form action="{{ url_for('delete_developer', id=d.Developer_ID) }}" method="POST" style="display: inline;"
+                        onsubmit="return confirmDelete('Developer', '{{ d.Developer_Name | replace('\'', '\\\'') }}');">
+                    <button type="submit" class="btn btn-danger btn-sm">🗑️ Delete</button>
+                  </form>
+                </div>
+              </td>
+            </tr>
+          {% endfor %}
+        {% else %}
+          <tr><td colspan="4" class="empty-state">No developers found. Click "Add Developer" to create one.</td></tr>
+        {% endif %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div id="addDeveloperModal" class="modal-overlay">
+  <div class="modal-dialog">
+    <div class="modal-header">
+      <h3>Add New Developer</h3>
+      <button type="button" class="modal-close" onclick="closeModal('addDeveloperModal')">&times;</button>
+    </div>
+    <form action="{{ url_for('add_developer') }}" method="POST">
+      <div class="modal-body">
+        <div class="form-group">
+          <label class="form-label" for="add_dev_name">Developer Name *</label>
+          <input type="text" id="add_dev_name" name="developer_name" class="form-control" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="add_dev_email">Email *</label>
+          <input type="email" id="add_dev_email" name="email" class="form-control" required>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" onclick="closeModal('addDeveloperModal')">Cancel</button>
+        <button type="submit" class="btn btn-primary">Save Developer</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div id="editDeveloperModal" class="modal-overlay">
+  <div class="modal-dialog">
+    <div class="modal-header">
+      <h3>Edit Developer</h3>
+      <button type="button" class="modal-close" onclick="closeModal('editDeveloperModal')">&times;</button>
+    </div>
+    <form id="editDeveloperForm" method="POST">
+      <div class="modal-body">
+        <div class="form-group">
+          <label class="form-label" for="edit_dev_name">Developer Name *</label>
+          <input type="text" id="edit_dev_name" name="developer_name" class="form-control" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="edit_dev_email">Email *</label>
+          <input type="email" id="edit_dev_email" name="email" class="form-control" required>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" onclick="closeModal('editDeveloperModal')">Cancel</button>
+        <button type="submit" class="btn btn-primary">Update Developer</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

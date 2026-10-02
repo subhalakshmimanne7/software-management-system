@@ -1,0 +1,134 @@
+{% extends "base.html" %}
+
+{% block title %}Versions - Software Management System{% endblock %}
+{% block page_heading %}Version Management{% endblock %}
+
+{% block content %}
+<div class="card">
+  <!-- Toolbar: Search & Add -->
+  <div class="toolbar-actions">
+    <form action="{{ url_for('versions') }}" method="GET" class="search-form">
+      <input type="text" name="search" class="form-control" placeholder="Search by version number or software name..." value="{{ search }}">
+      <button type="submit" class="btn btn-primary btn-sm">Search</button>
+      {% if search %}
+        <a href="{{ url_for('versions') }}" class="btn btn-secondary btn-sm">Clear</a>
+      {% endif %}
+    </form>
+    <button type="button" class="btn btn-primary" onclick="openModal('addVersionModal')">
+      ➕ Add Version
+    </button>
+  </div>
+
+  <!-- Versions Table -->
+  <div class="table-responsive">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Software Application</th>
+          <th>Version Number</th>
+          <th>Release Date</th>
+          <th style="text-align: right;">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% if versions %}
+          {% for v in versions %}
+            <tr>
+              <td><code>#{{ v.Version_ID }}</code></td>
+              <td><strong>{{ v.Software_Name }}</strong></td>
+              <td><span class="badge badge-info" style="font-family: monospace;">{{ v.Version_Number }}</span></td>
+              <td>{{ v.Release_Date }}</td>
+              <td style="text-align: right;">
+                <div class="action-buttons" style="justify-content: flex-end;">
+                  <button type="button" class="btn btn-secondary btn-sm"
+                          onclick="populateEditVersion({{ v.Version_ID }}, {{ v.Software_ID }}, '{{ v.Version_Number | replace('\'', '\\\'') }}', '{{ v.Release_Date }}')">
+                    ✏️ Edit
+                  </button>
+                  <form action="{{ url_for('delete_version', id=v.Version_ID) }}" method="POST" style="display: inline;"
+                        onsubmit="return confirmDelete('Version', '{{ v.Version_Number | replace('\'', '\\\'') }}');">
+                    <button type="submit" class="btn btn-danger btn-sm">🗑️ Delete</button>
+                  </form>
+                </div>
+              </td>
+            </tr>
+          {% endfor %}
+        {% else %}
+          <tr>
+            <td colspan="5" class="empty-state">No version history records found. Click "Add Version" to log a release.</td>
+          </tr>
+        {% endif %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Modal: Add Version -->
+<div id="addVersionModal" class="modal-overlay">
+  <div class="modal-dialog">
+    <div class="modal-header">
+      <h3>Add Software Version</h3>
+      <button type="button" class="modal-close" onclick="closeModal('addVersionModal')">&times;</button>
+    </div>
+    <form action="{{ url_for('add_version') }}" method="POST">
+      <div class="modal-body">
+        <div class="form-group">
+          <label class="form-label" for="add_v_software">Software Application *</label>
+          <select id="add_v_software" name="software_id" class="form-control" required>
+            <option value="">-- Select Software --</option>
+            {% for s in software_list %}
+              <option value="{{ s.Software_ID }}">{{ s.Software_Name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="add_v_number">Version Number *</label>
+          <input type="text" id="add_v_number" name="version_number" class="form-control" required placeholder="e.g. v1.2.0 or 2.0.1-rc">
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="add_v_date">Release Date *</label>
+          <input type="date" id="add_v_date" name="release_date" class="form-control" required value="{{ today_date }}">
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" onclick="closeModal('addVersionModal')">Cancel</button>
+        <button type="submit" class="btn btn-primary">Save Version</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Modal: Edit Version -->
+<div id="editVersionModal" class="modal-overlay">
+  <div class="modal-dialog">
+    <div class="modal-header">
+      <h3>Edit Version</h3>
+      <button type="button" class="modal-close" onclick="closeModal('editVersionModal')">&times;</button>
+    </div>
+    <form id="editVersionForm" method="POST">
+      <div class="modal-body">
+        <div class="form-group">
+          <label class="form-label" for="edit_version_software">Software Application *</label>
+          <select id="edit_version_software" name="software_id" class="form-control" required>
+            {% for s in software_list %}
+              <option value="{{ s.Software_ID }}">{{ s.Software_Name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="edit_version_number">Version Number *</label>
+          <input type="text" id="edit_version_number" name="version_number" class="form-control" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="edit_version_release">Release Date *</label>
+          <input type="date" id="edit_version_release" name="release_date" class="form-control" required>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" onclick="closeModal('editVersionModal')">Cancel</button>
+        <button type="submit" class="btn btn-primary">Update Version</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

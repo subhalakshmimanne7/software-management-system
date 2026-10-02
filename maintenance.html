@@ -1,0 +1,188 @@
+{% extends "base.html" %}
+
+{% block title %}Maintenance - Software Management System{% endblock %}
+{% block page_heading %}Maintenance Management{% endblock %}
+
+{% block content %}
+<div class="card">
+  <!-- Toolbar: Search & Add -->
+  <div class="toolbar-actions">
+    <form action="{{ url_for('maintenance') }}" method="GET" class="search-form">
+      <input type="text" name="search" class="form-control" placeholder="Search maintenance by task, developer, status, bug..." value="{{ search }}">
+      <button type="submit" class="btn btn-primary btn-sm">Search</button>
+      {% if search %}
+        <a href="{{ url_for('maintenance') }}" class="btn btn-secondary btn-sm">Clear</a>
+      {% endif %}
+    </form>
+    <button type="button" class="btn btn-primary" onclick="openModal('addMaintenanceModal')">
+      ➕ Log Maintenance
+    </button>
+  </div>
+
+  <!-- Maintenance Table -->
+  <div class="table-responsive">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Software & Bug</th>
+          <th>Maintenance Date</th>
+          <th>Description of Fix</th>
+          <th>Performed By</th>
+          <th>Status</th>
+          <th style="text-align: right;">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% if maintenance_list %}
+          {% for m in maintenance_list %}
+            <tr>
+              <td><code>#{{ m.Maintenance_ID }}</code></td>
+              <td>
+                <strong>{{ m.Software_Name }}</strong>
+                <div style="font-size: 11.5px; color: var(--text-muted);">
+                  Bug #{{ m.Bug_ID }}: {{ m.Bug_Description[:40] }}{% if m.Bug_Description|length > 40 %}...{% endif %}
+                </div>
+              </td>
+              <td style="white-space: nowrap;">{{ m.Maintenance_Date }}</td>
+              <td>{{ m.Description }}</td>
+              <td>
+                <strong>{{ m.Developer_Name }}</strong>
+              </td>
+              <td>
+                <span class="badge {% if m.Status == 'Completed' %}badge-success{% elif m.Status == 'In Progress' %}badge-warning{% else %}badge-info{% endif %}">
+                  {{ m.Status }}
+                </span>
+              </td>
+              <td style="text-align: right;">
+                <div class="action-buttons" style="justify-content: flex-end;">
+                  <button type="button" class="btn btn-secondary btn-sm"
+                          onclick="populateEditMaintenance({{ m.Maintenance_ID }}, {{ m.Bug_ID }}, '{{ m.Maintenance_Date }}', '{{ m.Description | replace('\'', '\\\'') }}', {{ m.Performed_By }}, '{{ m.Status }}')">
+                    ✏️ Edit
+                  </button>
+                  <form action="{{ url_for('delete_maintenance', id=m.Maintenance_ID) }}" method="POST" style="display: inline;"
+                        onsubmit="return confirmDelete('Maintenance Record', '#{{ m.Maintenance_ID }}');">
+                    <button type="submit" class="btn btn-danger btn-sm">🗑️ Delete</button>
+                  </form>
+                </div>
+              </td>
+            </tr>
+          {% endfor %}
+        {% else %}
+          <tr>
+            <td colspan="7" class="empty-state">No maintenance records found. Click "Log Maintenance" to record a fix.</td>
+          </tr>
+        {% endif %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Modal: Add Maintenance -->
+<div id="addMaintenanceModal" class="modal-overlay">
+  <div class="modal-dialog">
+    <div class="modal-header">
+      <h3>Log Maintenance Activity</h3>
+      <button type="button" class="modal-close" onclick="closeModal('addMaintenanceModal')">&times;</button>
+    </div>
+    <form action="{{ url_for('add_maintenance') }}" method="POST">
+      <div class="modal-body">
+        <div class="form-group">
+          <label class="form-label" for="add_m_bug">Bug Reference (fixed_by) *</label>
+          <select id="add_m_bug" name="bug_id" class="form-control" required>
+            <option value="">-- Select Reported Bug --</option>
+            {% for b in bugs %}
+              <option value="{{ b.Bug_ID }}">
+                [{{ b.Software_Name }}] #{{ b.Bug_ID }} - {{ b.Description[:45] }} ({{ b.Severity }})
+              </option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="add_m_dev">Developer (performed_by) *</label>
+          <select id="add_m_dev" name="performed_by" class="form-control" required>
+            <option value="">-- Select Assigned Developer --</option>
+            {% for dev in developers %}
+              <option value="{{ dev.Developer_ID }}">{{ dev.Developer_Name }} ({{ dev.Email }})</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="add_m_date">Maintenance Date *</label>
+          <input type="date" id="add_m_date" name="maintenance_date" class="form-control" required value="{{ today_date }}">
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="add_m_status">Status *</label>
+          <select id="add_m_status" name="status" class="form-control" required>
+            <option value="In Progress" selected>In Progress</option>
+            <option value="Completed">Completed</option>
+            <option value="Pending Review">Pending Review</option>
+            <option value="Deferred">Deferred</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="add_m_desc">Description of Work / Patch Details *</label>
+          <textarea id="add_m_desc" name="description" class="form-control" rows="3" required placeholder="Describe code modification, patch commit, testing verification..."></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" onclick="closeModal('addMaintenanceModal')">Cancel</button>
+        <button type="submit" class="btn btn-primary">Save Maintenance</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Modal: Edit Maintenance -->
+<div id="editMaintenanceModal" class="modal-overlay">
+  <div class="modal-dialog">
+    <div class="modal-header">
+      <h3>Edit Maintenance Record</h3>
+      <button type="button" class="modal-close" onclick="closeModal('editMaintenanceModal')">&times;</button>
+    </div>
+    <form id="editMaintenanceForm" method="POST">
+      <div class="modal-body">
+        <div class="form-group">
+          <label class="form-label" for="edit_maint_bug">Bug Reference *</label>
+          <select id="edit_maint_bug" name="bug_id" class="form-control" required>
+            {% for b in bugs %}
+              <option value="{{ b.Bug_ID }}">
+                [{{ b.Software_Name }}] #{{ b.Bug_ID }} - {{ b.Description[:45] }}
+              </option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="edit_maint_performed">Developer (performed_by) *</label>
+          <select id="edit_maint_performed" name="performed_by" class="form-control" required>
+            {% for dev in developers %}
+              <option value="{{ dev.Developer_ID }}">{{ dev.Developer_Name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="edit_maint_date">Maintenance Date *</label>
+          <input type="date" id="edit_maint_date" name="maintenance_date" class="form-control" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="edit_maint_status">Status *</label>
+          <select id="edit_maint_status" name="status" class="form-control" required>
+            <option value="In Progress">In Progress</option>
+            <option value="Completed">Completed</option>
+            <option value="Pending Review">Pending Review</option>
+            <option value="Deferred">Deferred</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="edit_maint_desc">Description *</label>
+          <textarea id="edit_maint_desc" name="description" class="form-control" rows="3" required></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" onclick="closeModal('editMaintenanceModal')">Cancel</button>
+        <button type="submit" class="btn btn-primary">Update Record</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,115 @@
+{% extends "base.html" %}
+
+{% block title %}SQL Reports - Software Management System{% endblock %}
+{% block page_heading %}DBMS Advanced SQL Reports Showcase{% endblock %}
+
+{% block content %}
+<div class="reports-layout">
+  <!-- Left Side: Catalog of 15 Reports -->
+  <div class="reports-menu">
+    <div style="padding: 6px 12px 10px; font-weight: 700; font-size: 13px; color: var(--text-main); border-bottom: 1px solid var(--border-color); margin-bottom: 8px;">
+      DBMS Evaluation Queries (15)
+    </div>
+    {% for r in reports %}
+      <a href="{{ url_for('reports', report=r.id) }}" 
+         class="report-menu-item {% if active_report == r.id %}active{% endif %}">
+        <strong>{{ r.title }}</strong>
+        <div style="font-size: 11px; opacity: 0.8; margin-top: 2px;">{{ r.desc }}</div>
+      </a>
+    {% endfor %}
+  </div>
+
+  <!-- Right Side: Active Report Details & Execution Result -->
+  <div>
+    <!-- Report Header Card -->
+    <div class="card" style="margin-bottom: 16px;">
+      <div class="card-header" style="margin-bottom: 12px; padding-bottom: 8px;">
+        <div>
+          <h2 style="font-size: 18px; font-weight: 700; color: var(--text-main);">
+            {{ title }}
+          </h2>
+          <span style="font-size: 12px; color: var(--text-muted);">
+            Live SQL Query Executed against MySQL Relational Engine
+          </span>
+        </div>
+        <div>
+          <span class="badge badge-info" style="font-size: 12px; padding: 5px 10px;">
+            Rows Returned: {{ rows|length }}
+          </span>
+        </div>
+      </div>
+
+      <!-- Parameter controls for Report 15 (HAVING clause) -->
+      {% if active_report == '15' %}
+        <form action="{{ url_for('reports') }}" method="GET" style="display: flex; align-items: center; gap: 10px; margin-bottom: 14px; background: #f8fafc; padding: 10px 14px; border-radius: var(--radius-sm); border: 1px solid var(--border-color);">
+          <input type="hidden" name="report" value="15">
+          <label style="font-size: 12.5px; font-weight: 600;">Minimum Bugs Threshold (HAVING Bug_Count >= N):</label>
+          <input type="number" name="min_bugs" value="{{ min_bugs }}" min="0" max="50" class="form-control" style="width: 80px; padding: 4px 8px;">
+          <button type="submit" class="btn btn-primary btn-sm">Filter Report</button>
+        </form>
+      {% endif %}
+
+      <!-- SQL Query Code Block -->
+      <div style="font-size: 12px; font-weight: 600; color: var(--text-muted); margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px;">
+        SQL Query Statement:
+      </div>
+      <div class="sql-box">{{ sql_query }}</div>
+    </div>
+
+    <!-- Query Results Table -->
+    <div class="card">
+      <div class="card-header">
+        <h3>Query Execution Results</h3>
+      </div>
+      <div class="table-responsive">
+        <table class="data-table">
+          <thead>
+            <tr>
+              {% for col in columns %}
+                <th>{{ col | replace('_', ' ') }}</th>
+              {% endfor %}
+            </tr>
+          </thead>
+          <tbody>
+            {% if rows %}
+              {% for row in rows %}
+                <tr>
+                  {% for col in columns %}
+                    <td>
+                      {% if col in ['Status', 'Project_Status', 'Software_Status', 'Maintenance_Status'] %}
+                        <span class="badge {% if row[col] in ['Active', 'Completed', 'Resolved'] %}badge-success{% elif row[col] in ['In Progress', 'Testing'] %}badge-warning{% else %}badge-secondary{% endif %}">
+                          {{ row[col] }}
+                        </span>
+                      {% elif col == 'Severity' %}
+                        <span class="badge {% if row[col] in ['Critical', 'High'] %}badge-danger{% elif row[col] == 'Medium' %}badge-warning{% else %}badge-info{% endif %}">
+                          {{ row[col] }}
+                        </span>
+                      {% elif col in ['Expiry_Evaluation', 'Expiry_Check'] %}
+                        <span class="badge {% if row[col] == 'EXPIRED' %}badge-danger{% else %}badge-success{% endif %}">
+                          {{ row[col] }}
+                        </span>
+                      {% elif col == 'Days_Overdue' %}
+                        <span style="color: #dc2626; font-weight: bold;">{{ row[col] }} days overdue</span>
+                      {% elif col == 'Technologies_Used' %}
+                        <span style="font-weight: 600; color: #1e293b;">{{ row[col] }}</span>
+                      {% else %}
+                        {{ row[col] if row[col] is not none else '-' }}
+                      {% endif %}
+                    </td>
+                  {% endfor %}
+                </tr>
+              {% endfor %}
+            {% else %}
+              <tr>
+                <td colspan="{{ columns|length or 1 }}" class="empty-state">
+                  No records returned for this query specification.
+                </td>
+              </tr>
+            {% endif %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

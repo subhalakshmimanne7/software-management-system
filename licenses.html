@@ -1,0 +1,186 @@
+{% extends "base.html" %}
+
+{% block title %}Licenses - Software Management System{% endblock %}
+{% block page_heading %}License Management{% endblock %}
+
+{% block content %}
+<div class="card">
+  <!-- Toolbar: Search & Filter & Add -->
+  <div class="toolbar-actions">
+    <form action="{{ url_for('licenses') }}" method="GET" class="search-form" style="max-width: 600px;">
+      <input type="text" name="search" class="form-control" placeholder="Search by license type or software..." value="{{ search }}" style="flex: 2;">
+      <select name="status" class="form-control" style="flex: 1;">
+        <option value="">All Statuses</option>
+        <option value="Active" {% if status_filter == 'Active' %}selected{% endif %}>Active</option>
+        <option value="Expired" {% if status_filter == 'Expired' %}selected{% endif %}>Expired</option>
+        <option value="Trial" {% if status_filter == 'Trial' %}selected{% endif %}>Trial</option>
+      </select>
+      <button type="submit" class="btn btn-primary btn-sm">Filter</button>
+      {% if search or status_filter %}
+        <a href="{{ url_for('licenses') }}" class="btn btn-secondary btn-sm">Reset</a>
+      {% endif %}
+    </form>
+    <button type="button" class="btn btn-primary" onclick="openModal('addLicenseModal')">
+      ➕ Add License
+    </button>
+  </div>
+
+  <!-- Licenses Table -->
+  <div class="table-responsive">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Software Application</th>
+          <th>License Type</th>
+          <th>Start Date</th>
+          <th>Expiry Date</th>
+          <th>Evaluation / Days</th>
+          <th>Stored Status</th>
+          <th style="text-align: right;">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% if licenses %}
+          {% for l in licenses %}
+            <tr>
+              <td><code>#{{ l.License_ID }}</code></td>
+              <td><strong>{{ l.Software_Name }}</strong></td>
+              <td>{{ l.License_Type }}</td>
+              <td>{{ l.Start_Date }}</td>
+              <td>{{ l.Expiry_Date }}</td>
+              <td>
+                {% if l.Auto_Status == 'EXPIRED' %}
+                  <span class="badge badge-danger">EXPIRED ({{ -l.Days_Remaining }}d ago)</span>
+                {% else %}
+                  <span class="badge badge-success">VALID ({{ l.Days_Remaining }}d left)</span>
+                {% endif %}
+              </td>
+              <td>
+                <span class="badge {% if l.License_Status == 'Active' %}badge-success{% else %}badge-danger{% endif %}">
+                  {{ l.License_Status }}
+                </span>
+              </td>
+              <td style="text-align: right;">
+                <div class="action-buttons" style="justify-content: flex-end;">
+                  <button type="button" class="btn btn-secondary btn-sm"
+                          onclick="populateEditLicense({{ l.License_ID }}, {{ l.Software_ID }}, '{{ l.License_Type | replace('\'', '\\\'') }}', '{{ l.Start_Date }}', '{{ l.Expiry_Date }}', '{{ l.License_Status }}')">
+                    ✏️ Edit
+                  </button>
+                  <form action="{{ url_for('delete_license', id=l.License_ID) }}" method="POST" style="display: inline;"
+                        onsubmit="return confirmDelete('License', '#{{ l.License_ID }}');">
+                    <button type="submit" class="btn btn-danger btn-sm">🗑️ Delete</button>
+                  </form>
+                </div>
+              </td>
+            </tr>
+          {% endfor %}
+        {% else %}
+          <tr>
+            <td colspan="8" class="empty-state">No license agreements found. Click "Add License" to create one.</td>
+          </tr>
+        {% endif %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Modal: Add License -->
+<div id="addLicenseModal" class="modal-overlay">
+  <div class="modal-dialog">
+    <div class="modal-header">
+      <h3>Add New Software License</h3>
+      <button type="button" class="modal-close" onclick="closeModal('addLicenseModal')">&times;</button>
+    </div>
+    <form action="{{ url_for('add_license') }}" method="POST">
+      <div class="modal-body">
+        <div class="form-group">
+          <label class="form-label" for="add_lic_sw">Software Application *</label>
+          <select id="add_lic_sw" name="software_id" class="form-control" required>
+            <option value="">-- Select Software --</option>
+            {% for s in software_list %}
+              <option value="{{ s.Software_ID }}">{{ s.Software_Name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="add_lic_type">License Type *</label>
+          <input type="text" id="add_lic_type" name="license_type" class="form-control" required placeholder="e.g. MIT, Commercial Enterprise, Apache 2.0">
+        </div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+          <div class="form-group">
+            <label class="form-label" for="add_lic_start">Start Date *</label>
+            <input type="date" id="add_lic_start" name="start_date" class="form-control" required value="{{ today_date }}">
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="add_lic_expiry">Expiry Date *</label>
+            <input type="date" id="add_lic_expiry" name="expiry_date" class="form-control" required>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="add_lic_status">License Status</label>
+          <select id="add_lic_status" name="license_status" class="form-control">
+            <option value="Active" selected>Active</option>
+            <option value="Expired">Expired</option>
+            <option value="Suspended">Suspended</option>
+            <option value="Trial">Trial</option>
+          </select>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" onclick="closeModal('addLicenseModal')">Cancel</button>
+        <button type="submit" class="btn btn-primary">Save License</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Modal: Edit License -->
+<div id="editLicenseModal" class="modal-overlay">
+  <div class="modal-dialog">
+    <div class="modal-header">
+      <h3>Edit Software License</h3>
+      <button type="button" class="modal-close" onclick="closeModal('editLicenseModal')">&times;</button>
+    </div>
+    <form id="editLicenseForm" method="POST">
+      <div class="modal-body">
+        <div class="form-group">
+          <label class="form-label" for="edit_license_software">Software Application *</label>
+          <select id="edit_license_software" name="software_id" class="form-control" required>
+            {% for s in software_list %}
+              <option value="{{ s.Software_ID }}">{{ s.Software_Name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="edit_license_type">License Type *</label>
+          <input type="text" id="edit_license_type" name="license_type" class="form-control" required>
+        </div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+          <div class="form-group">
+            <label class="form-label" for="edit_license_start">Start Date *</label>
+            <input type="date" id="edit_license_start" name="start_date" class="form-control" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="edit_license_expiry">Expiry Date *</label>
+            <input type="date" id="edit_license_expiry" name="expiry_date" class="form-control" required>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="edit_license_status">License Status</label>
+          <select id="edit_license_status" name="license_status" class="form-control">
+            <option value="Active">Active</option>
+            <option value="Expired">Expired</option>
+            <option value="Suspended">Suspended</option>
+            <option value="Trial">Trial</option>
+          </select>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" onclick="closeModal('editLicenseModal')">Cancel</button>
+        <button type="submit" class="btn btn-primary">Update License</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

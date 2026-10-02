@@ -1,0 +1,235 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - Software Management System{% endblock %}
+{% block page_heading %}Executive Dashboard{% endblock %}
+
+{% block content %}
+<div class="dash-layout">
+
+  <!-- MAIN: details -->
+  <section class="dash-main">
+
+  {% if selected != 'overview' and entity %}
+    <div class="card">
+      <div class="card-header">
+        <h3>{{ entity.icon }} {{ entity.title }} <span class="entity-count">{{ entity_rows|length }}</span></h3>
+        <div style="display:flex; gap:8px; align-items:center;">
+          <input type="text" id="entityFilter" class="entity-filter" placeholder="Filter rows...">
+          <a href="{{ url_for(entity.page) }}" class="btn btn-sm btn-primary">Open full page</a>
+        </div>
+      </div>
+      <div class="table-responsive">
+        <table class="data-table" id="entityTable">
+          <thead>
+            <tr>
+              {% for col, label in entity.cols %}<th>{{ label }}</th>{% endfor %}
+            </tr>
+          </thead>
+          <tbody>
+            {% if entity_rows %}
+              {% for row in entity_rows %}
+                <tr>
+                  {% for col, label in entity.cols %}
+                    {% set v = row[col] %}
+                    <td>
+                      {% if v is none %}
+                        <span style="color: var(--text-muted);">-</span>
+                      {% elif col in ['Status', 'Project_Status', 'License_Status', 'Severity'] %}
+                        <span class="badge {% if v in ['Critical', 'High', 'Open', 'Expired'] %}badge-danger{% elif v in ['Medium', 'In Progress', 'Planning', 'Pending Review', 'Testing'] %}badge-warning{% elif v in ['Completed', 'Resolved', 'Closed', 'Active'] %}badge-success{% else %}badge-info{% endif %}">{{ v }}</span>
+                      {% elif v.strftime is defined %}
+                        {{ v.strftime('%Y-%m-%d') }}
+                      {% elif col == 'Description' %}
+                        {{ (v|string)[:60] }}{% if (v|string)|length > 60 %}...{% endif %}
+                      {% else %}
+                        {{ v }}
+                      {% endif %}
+                    </td>
+                  {% endfor %}
+                </tr>
+              {% endfor %}
+            {% else %}
+              <tr><td colspan="{{ entity.cols|length }}" class="empty-state">No {{ entity.title|lower }} found.</td></tr>
+            {% endif %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  {% else %}
+    <!-- OVERVIEW -->
+    <div class="card" style="background: linear-gradient(135deg, #1e293b, #0f172a); color: white; border: none; margin-bottom: 24px;">
+      <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px;">
+        <div>
+          <h2 style="font-size: 20px; font-weight: 700; margin-bottom: 4px; color: #f8fafc;">
+            Welcome to Software Management System
+          </h2>
+        </div>
+
+      </div>
+    </div>
+
+    <div class="stats-grid">
+      <a href="{{ url_for('dashboard', entity='users') }}" class="stat-card" style="text-decoration:none; color:inherit;">
+        <div class="stat-icon" style="background-color: #dbeafe; color: #1d4ed8;">👥</div>
+        <div class="stat-info"><h4>Total Users</h4><div class="stat-number">{{ counts.get('users', 0) }}</div></div>
+      </a>
+      <a href="{{ url_for('dashboard', entity='departments') }}" class="stat-card" style="text-decoration:none; color:inherit;">
+        <div class="stat-icon" style="background-color: #fef3c7; color: #b45309;">🏢</div>
+        <div class="stat-info"><h4>Total Departments</h4><div class="stat-number">{{ counts.get('departments', 0) }}</div></div>
+      </a>
+      <a href="{{ url_for('dashboard', entity='projects') }}" class="stat-card" style="text-decoration:none; color:inherit;">
+        <div class="stat-icon" style="background-color: #e0e7ff; color: #4338ca;">📁</div>
+        <div class="stat-info"><h4>Total Projects</h4><div class="stat-number">{{ counts.get('projects', 0) }}</div></div>
+      </a>
+      <a href="{{ url_for('dashboard', entity='developers') }}" class="stat-card" style="text-decoration:none; color:inherit;">
+        <div class="stat-icon" style="background-color: #dcfce7; color: #15803d;">👨‍💻</div>
+        <div class="stat-info"><h4>Total Developers</h4><div class="stat-number">{{ counts.get('developers', 0) }}</div></div>
+      </a>
+      <a href="{{ url_for('dashboard', entity='software') }}" class="stat-card" style="text-decoration:none; color:inherit;">
+        <div class="stat-icon" style="background-color: #ede9fe; color: #6d28d9;">💻</div>
+        <div class="stat-info"><h4>Total Software</h4><div class="stat-number">{{ counts.get('software', 0) }}</div></div>
+      </a>
+      <a href="{{ url_for('dashboard', entity='versions') }}" class="stat-card" style="text-decoration:none; color:inherit;">
+        <div class="stat-icon" style="background-color: #fae8ff; color: #a21caf;">🏷️</div>
+        <div class="stat-info"><h4>Total Versions</h4><div class="stat-number">{{ counts.get('versions', 0) }}</div></div>
+      </a>
+      <a href="{{ url_for('dashboard', entity='bugs') }}" class="stat-card" style="text-decoration:none; color:inherit;">
+        <div class="stat-icon" style="background-color: #fee2e2; color: #b91c1c;">🐞</div>
+        <div class="stat-info"><h4>Total Bugs</h4><div class="stat-number">{{ counts.get('bugs', 0) }}</div></div>
+      </a>
+      <a href="{{ url_for('dashboard', entity='maintenance') }}" class="stat-card" style="text-decoration:none; color:inherit;">
+        <div class="stat-icon" style="background-color: #ffedd5; color: #c2410c;">🛠️</div>
+        <div class="stat-info"><h4>Total Maintenance</h4><div class="stat-number">{{ counts.get('maintenance', 0) }}</div></div>
+      </a>
+      <a href="{{ url_for('dashboard', entity='licenses') }}" class="stat-card" style="text-decoration:none; color:inherit;">
+        <div class="stat-icon" style="background-color: #ccfbf1; color: #0f766e;">📜</div>
+        <div class="stat-info"><h4>Total Licenses</h4><div class="stat-number">{{ counts.get('licenses', 0) }}</div></div>
+      </a>
+      <a href="{{ url_for('dashboard', entity='technologies') }}" class="stat-card" style="text-decoration:none; color:inherit;">
+        <div class="stat-icon" style="background-color: #f1f5f9; color: #334155;">⚙️</div>
+        <div class="stat-info"><h4>Technologies</h4><div class="stat-number">{{ counts.get('technologies', 0) }}</div></div>
+      </a>
+    </div>
+
+    <div class="summary-grid">
+      <!-- Active Projects -->
+      <div class="card">
+        <div class="card-header">
+          <h3>📁 Active Projects (not completed)</h3>
+          <a href="{{ url_for('dashboard', entity='projects') }}" class="btn btn-sm btn-secondary">View All</a>
+        </div>
+        <div class="table-responsive">
+          <table class="data-table">
+            <thead><tr><th>Project</th><th>Department</th><th>Status</th></tr></thead>
+            <tbody>
+              {% for p in active_projects %}
+                <tr>
+                  <td><strong>{{ p.Project_Name }}</strong></td>
+                  <td>{{ p.Department_Name }}</td>
+                  <td><span class="badge {% if p.Project_Status == 'In Progress' %}badge-warning{% else %}badge-info{% endif %}">{{ p.Project_Status }}</span></td>
+                </tr>
+              {% else %}
+                <tr><td colspan="3" class="empty-state">No active projects found.</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Open Bugs -->
+      <div class="card">
+        <div class="card-header">
+          <h3>🐞 Open & In Progress Bugs</h3>
+          <a href="{{ url_for('dashboard', entity='bugs') }}" class="btn btn-sm btn-secondary">View All</a>
+        </div>
+        <div class="table-responsive">
+          <table class="data-table">
+            <thead><tr><th>Software</th><th>Description</th><th>Severity</th><th>Status</th></tr></thead>
+            <tbody>
+              {% for b in open_bugs %}
+                {% set desc = (b.Description or '')|string %}
+                <tr>
+                  <td><strong>{{ b.Software_Name }}</strong></td>
+                  <td>{{ desc[:45] }}{% if desc|length > 45 %}...{% endif %}</td>
+                  <td><span class="badge {% if b.Severity in ['Critical', 'High'] %}badge-danger{% elif b.Severity == 'Medium' %}badge-warning{% else %}badge-info{% endif %}">{{ b.Severity }}</span></td>
+                  <td><span class="badge {% if b.Status == 'Open' %}badge-danger{% else %}badge-warning{% endif %}">{{ b.Status }}</span></td>
+                </tr>
+              {% else %}
+                <tr><td colspan="4" class="empty-state">No open bugs found!</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Expired Licenses -->
+      <div class="card">
+        <div class="card-header">
+          <h3>⚠️ Expired Software Licenses</h3>
+          <a href="{{ url_for('dashboard', entity='licenses') }}" class="btn btn-sm btn-secondary">View All</a>
+        </div>
+        <div class="table-responsive">
+          <table class="data-table">
+            <thead><tr><th>Software</th><th>License Type</th><th>Expired On</th></tr></thead>
+            <tbody>
+              {% for l in expired_licenses %}
+                <tr>
+                  <td><strong>{{ l.Software_Name }}</strong></td>
+                  <td>{{ l.License_Type }}</td>
+                  <td style="color: #dc2626; font-weight: 500;">{{ l.Expiry_Date }} ({{ l.Days_Expired }}d ago)</td>
+                </tr>
+              {% else %}
+                <tr><td colspan="3" class="empty-state">No expired licenses at present.</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Recent Maintenance -->
+      <div class="card">
+        <div class="card-header">
+          <h3>🛠️ Recent Maintenance</h3>
+          <a href="{{ url_for('dashboard', entity='maintenance') }}" class="btn btn-sm btn-secondary">View All</a>
+        </div>
+        <div class="table-responsive">
+          <table class="data-table">
+            <thead><tr><th>Date</th><th>Developer</th><th>Action</th><th>Status</th></tr></thead>
+            <tbody>
+              {% for m in recent_maintenance %}
+                {% set mdesc = (m.Description or '')|string %}
+                <tr>
+                  <td style="white-space: nowrap;">{{ m.Maintenance_Date }}</td>
+                  <td><strong>{{ m.Developer_Name }}</strong></td>
+                  <td>{{ mdesc[:45] }}{% if mdesc|length > 45 %}...{% endif %}</td>
+                  <td><span class="badge {% if m.Status == 'Completed' %}badge-success{% else %}badge-warning{% endif %}">{{ m.Status }}</span></td>
+                </tr>
+              {% else %}
+                <tr><td colspan="4" class="empty-state">No recent maintenance logs found.</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  {% endif %}
+
+  </section>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  (function () {
+    var input = document.getElementById('entityFilter');
+    var table = document.getElementById('entityTable');
+    if (!input || !table) return;
+    input.addEventListener('input', function () {
+      var q = input.value.toLowerCase();
+      table.querySelectorAll('tbody tr').forEach(function (tr) {
+        tr.style.display = tr.textContent.toLowerCase().indexOf(q) === -1 ? 'none' : '';
+      });
+    });
+  })();
+</script>
+{% endblock %}

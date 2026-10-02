@@ -1,0 +1,184 @@
+{% extends "base.html" %}
+
+{% block title %}Projects - Software Management System{% endblock %}
+{% block page_heading %}Project Management{% endblock %}
+
+{% block content %}
+<div class="card">
+  <!-- Toolbar: Search & Add -->
+  <div class="toolbar-actions">
+    <form action="{{ url_for('projects') }}" method="GET" class="search-form">
+      <input type="text" name="search" class="form-control" placeholder="Search by project name, status, department..." value="{{ search }}">
+      <button type="submit" class="btn btn-primary btn-sm">Search</button>
+      {% if search %}
+        <a href="{{ url_for('projects') }}" class="btn btn-secondary btn-sm">Clear</a>
+      {% endif %}
+    </form>
+    <button type="button" class="btn btn-primary" onclick="openModal('addProjectModal')">
+      ➕ Add Project
+    </button>
+  </div>
+
+  <!-- Projects Table -->
+  <div class="table-responsive">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Project Name</th>
+          <th>Department</th>
+          <th>Start Date</th>
+          <th>End Date</th>
+          <th>Status</th>
+          <th>Description</th>
+          <th style="text-align: right;">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% if projects %}
+          {% for p in projects %}
+            <tr>
+              <td><code>#{{ p.Project_ID }}</code></td>
+              <td><strong>{{ p.Project_Name }}</strong></td>
+              <td><span class="badge badge-secondary">{{ p.Department_Name }}</span></td>
+              <td>{{ p.Start_Date or '-' }}</td>
+              <td>{{ p.End_Date or 'Ongoing' }}</td>
+              <td>
+                <span class="badge {% if p.Project_Status == 'Completed' %}badge-success{% elif p.Project_Status == 'In Progress' %}badge-warning{% elif p.Project_Status == 'Planning' %}badge-info{% else %}badge-secondary{% endif %}">
+                  {{ p.Project_Status }}
+                </span>
+              </td>
+              <td>{{ p.Description or '-' }}</td>
+              <td style="text-align: right;">
+                <div class="action-buttons" style="justify-content: flex-end;">
+                  <button type="button" class="btn btn-secondary btn-sm"
+                          onclick="populateEditProject({{ p.Project_ID }}, '{{ p.Project_Name | replace('\'', '\\\'') }}', '{{ (p.Description or '') | replace('\'', '\\\'') }}', '{{ p.Start_Date }}', '{{ p.End_Date or '' }}', '{{ p.Project_Status }}', {{ p.Department_ID }})">
+                    ✏️ Edit
+                  </button>
+                  <form action="{{ url_for('delete_project', id=p.Project_ID) }}" method="POST" style="display: inline;"
+                        onsubmit="return confirmDelete('Project', '{{ p.Project_Name | replace('\'', '\\\'') }}');">
+                    <button type="submit" class="btn btn-danger btn-sm">🗑️ Delete</button>
+                  </form>
+                </div>
+              </td>
+            </tr>
+          {% endfor %}
+        {% else %}
+          <tr>
+            <td colspan="8" class="empty-state">No projects found. Click "Add Project" to register one.</td>
+          </tr>
+        {% endif %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Modal: Add Project -->
+<div id="addProjectModal" class="modal-overlay">
+  <div class="modal-dialog">
+    <div class="modal-header">
+      <h3>Add New Project</h3>
+      <button type="button" class="modal-close" onclick="closeModal('addProjectModal')">&times;</button>
+    </div>
+    <form action="{{ url_for('add_project') }}" method="POST">
+      <div class="modal-body">
+        <div class="form-group">
+          <label class="form-label" for="add_project_name">Project Name *</label>
+          <input type="text" id="add_project_name" name="project_name" class="form-control" required placeholder="e.g. Campus ERP Platform">
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="add_dept_id">Department (Owner) *</label>
+          <select id="add_dept_id" name="department_id" class="form-control" required>
+            <option value="">-- Select Department --</option>
+            {% for d in departments %}
+              <option value="{{ d.Department_ID }}">{{ d.Department_Name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+          <div class="form-group">
+            <label class="form-label" for="add_start_date">Start Date</label>
+            <input type="date" id="add_start_date" name="start_date" class="form-control" value="{{ today_date }}">
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="add_end_date">End Date</label>
+            <input type="date" id="add_end_date" name="end_date" class="form-control">
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="add_status">Project Status</label>
+          <select id="add_status" name="project_status" class="form-control">
+            <option value="Planning">Planning</option>
+            <option value="In Progress" selected>In Progress</option>
+            <option value="Testing">Testing</option>
+            <option value="Completed">Completed</option>
+            <option value="On Hold">On Hold</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="add_description">Description</label>
+          <textarea id="add_description" name="description" class="form-control" rows="3" placeholder="Scope, milestones, and objectives..."></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" onclick="closeModal('addProjectModal')">Cancel</button>
+        <button type="submit" class="btn btn-primary">Save Project</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Modal: Edit Project -->
+<div id="editProjectModal" class="modal-overlay">
+  <div class="modal-dialog">
+    <div class="modal-header">
+      <h3>Edit Project</h3>
+      <button type="button" class="modal-close" onclick="closeModal('editProjectModal')">&times;</button>
+    </div>
+    <form id="editProjectForm" method="POST">
+      <div class="modal-body">
+        <div class="form-group">
+          <label class="form-label" for="edit_project_name">Project Name *</label>
+          <input type="text" id="edit_project_name" name="project_name" class="form-control" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="edit_project_dept">Department (Owner) *</label>
+          <select id="edit_project_dept" name="department_id" class="form-control" required>
+            {% for d in departments %}
+              <option value="{{ d.Department_ID }}">{{ d.Department_Name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+          <div class="form-group">
+            <label class="form-label" for="edit_project_start">Start Date</label>
+            <input type="date" id="edit_project_start" name="start_date" class="form-control">
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="edit_project_end">End Date</label>
+            <input type="date" id="edit_project_end" name="end_date" class="form-control">
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="edit_project_status">Project Status</label>
+          <select id="edit_project_status" name="project_status" class="form-control">
+            <option value="Planning">Planning</option>
+            <option value="In Progress">In Progress</option>
+            <option value="Testing">Testing</option>
+            <option value="Completed">Completed</option>
+            <option value="On Hold">On Hold</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="edit_project_desc">Description</label>
+          <textarea id="edit_project_desc" name="description" class="form-control" rows="3"></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" onclick="closeModal('editProjectModal')">Cancel</button>
+        <button type="submit" class="btn btn-primary">Update Project</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

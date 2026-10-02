@@ -1,0 +1,207 @@
+{% extends "base.html" %}
+
+{% block title %}Software - Software Management System{% endblock %}
+{% block page_heading %}Software Management{% endblock %}
+
+{% block content %}
+<div class="card">
+  <!-- Toolbar: Search & Add -->
+  <div class="toolbar-actions">
+    <form action="{{ url_for('software') }}" method="GET" class="search-form">
+      <input type="text" name="search" class="form-control" placeholder="Search by software name, status, project..." value="{{ search }}">
+      <button type="submit" class="btn btn-primary btn-sm">Search</button>
+      {% if search %}
+        <a href="{{ url_for('software') }}" class="btn btn-secondary btn-sm">Clear</a>
+      {% endif %}
+    </form>
+    <button type="button" class="btn btn-primary" onclick="openModal('addSoftwareModal')">
+      ➕ Add Software
+    </button>
+  </div>
+
+  <!-- Software Table -->
+  <div class="table-responsive">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Software Name</th>
+          <th>Parent Project</th>
+          <th>Status</th>
+          <th>Technologies Used (M:N)</th>
+          <th>Description</th>
+          <th style="text-align: right;">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% if software %}
+          {% for sw in software %}
+            <tr>
+              <td><code>#{{ sw.Software_ID }}</code></td>
+              <td><strong>{{ sw.Software_Name }}</strong></td>
+              <td><span class="badge badge-secondary">{{ sw.Project_Name }}</span></td>
+              <td>
+                <span class="badge {% if sw.Status == 'Active' %}badge-success{% elif sw.Status == 'Testing' %}badge-warning{% elif sw.Status == 'Archived' %}badge-secondary{% else %}badge-info{% endif %}">
+                  {{ sw.Status }}
+                </span>
+              </td>
+              <td>
+                {% if sw.technologies %}
+                  <div style="display: flex; flex-wrap: wrap; gap: 4px; align-items: center;">
+                    {% for tech in sw.technologies %}
+                      <span class="tech-tag" title="{{ tech.Technology_Type }}">
+                        {{ tech.Technology_Name }}
+                        <form action="{{ url_for('manage_software_tech', software_id=sw.Software_ID) }}" method="POST" style="display:inline; margin-left: 2px;">
+                          <input type="hidden" name="action" value="remove">
+                          <input type="hidden" name="technology_id" value="{{ tech.Technology_ID }}">
+                          <button type="submit" style="background:none; border:none; color:#ef4444; font-weight:bold; cursor:pointer; font-size:10px;" title="Remove this technology">&times;</button>
+                        </form>
+                      </span>
+                    {% endfor %}
+                  </div>
+                {% else %}
+                  <span style="color: var(--text-muted); font-size: 11.5px;">No technologies linked</span>
+                {% endif %}
+              </td>
+              <td>{{ sw.Description or '-' }}</td>
+              <td style="text-align: right;">
+                <div class="action-buttons" style="justify-content: flex-end;">
+                  <!-- Build JSON array of assigned tech IDs for pre-filling edit modal -->
+                  {% set tech_id_list = [] %}
+                  {% for t in sw.technologies %}
+                    {% set _ = tech_id_list.append(t.Technology_ID) %}
+                  {% endfor %}
+                  <button type="button" class="btn btn-secondary btn-sm"
+                          onclick="populateEditSoftware({{ sw.Software_ID }}, '{{ sw.Software_Name | replace('\'', '\\\'') }}', '{{ (sw.Description or '') | replace('\'', '\\\'') }}', '{{ sw.Status }}', {{ sw.Project_ID }}, '{{ tech_id_list | tojson }}')">
+                    ✏️ Edit
+                  </button>
+                  <form action="{{ url_for('delete_software', id=sw.Software_ID) }}" method="POST" style="display: inline;"
+                        onsubmit="return confirmDelete('Software', '{{ sw.Software_Name | replace('\'', '\\\'') }}');">
+                    <button type="submit" class="btn btn-danger btn-sm">🗑️ Delete</button>
+                  </form>
+                </div>
+              </td>
+            </tr>
+          {% endfor %}
+        {% else %}
+          <tr>
+            <td colspan="7" class="empty-state">No software records found. Click "Add Software" to register an application.</td>
+          </tr>
+        {% endif %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Modal: Add Software -->
+<div id="addSoftwareModal" class="modal-overlay">
+  <div class="modal-dialog">
+    <div class="modal-header">
+      <h3>Add New Software</h3>
+      <button type="button" class="modal-close" onclick="closeModal('addSoftwareModal')">&times;</button>
+    </div>
+    <form action="{{ url_for('add_software') }}" method="POST">
+      <div class="modal-body">
+        <div class="form-group">
+          <label class="form-label" for="add_sw_name">Software Name *</label>
+          <input type="text" id="add_sw_name" name="software_name" class="form-control" required placeholder="e.g. Student Attendance Tracker">
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="add_sw_project">Project *</label>
+          <select id="add_sw_project" name="project_id" class="form-control" required>
+            <option value="">-- Select Parent Project --</option>
+            {% for p in projects %}
+              <option value="{{ p.Project_ID }}">{{ p.Project_Name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="add_sw_status">Status</label>
+          <select id="add_sw_status" name="status" class="form-control">
+            <option value="Active" selected>Active</option>
+            <option value="Development">Development</option>
+            <option value="Testing">Testing</option>
+            <option value="Archived">Archived</option>
+            <option value="Deprecated">Deprecated</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Technologies Used (SOFTWARE_TECHNOLOGY M:N)</label>
+          <div style="max-height: 120px; overflow-y: auto; border: 1px solid var(--border-color); padding: 8px; border-radius: var(--radius-sm); background: #ffffff;">
+            {% for tech in all_technologies %}
+              <label style="display: flex; align-items: center; gap: 8px; font-size: 12px; margin-bottom: 4px; cursor: pointer;">
+                <input type="checkbox" name="technologies" value="{{ tech.Technology_ID }}">
+                <span><strong>{{ tech.Technology_Name }}</strong> ({{ tech.Technology_Type }})</span>
+              </label>
+            {% endfor %}
+          </div>
+          <span class="form-text">Select all technologies applicable to this software stack.</span>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="add_sw_desc">Description</label>
+          <textarea id="add_sw_desc" name="description" class="form-control" rows="3" placeholder="Application functionality and architecture notes..."></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" onclick="closeModal('addSoftwareModal')">Cancel</button>
+        <button type="submit" class="btn btn-primary">Save Software</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Modal: Edit Software -->
+<div id="editSoftwareModal" class="modal-overlay">
+  <div class="modal-dialog">
+    <div class="modal-header">
+      <h3>Edit Software</h3>
+      <button type="button" class="modal-close" onclick="closeModal('editSoftwareModal')">&times;</button>
+    </div>
+    <form id="editSoftwareForm" method="POST">
+      <div class="modal-body">
+        <div class="form-group">
+          <label class="form-label" for="edit_software_name">Software Name *</label>
+          <input type="text" id="edit_software_name" name="software_name" class="form-control" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="edit_software_project">Project *</label>
+          <select id="edit_software_project" name="project_id" class="form-control" required>
+            {% for p in projects %}
+              <option value="{{ p.Project_ID }}">{{ p.Project_Name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="edit_software_status">Status</label>
+          <select id="edit_software_status" name="status" class="form-control">
+            <option value="Active">Active</option>
+            <option value="Development">Development</option>
+            <option value="Testing">Testing</option>
+            <option value="Archived">Archived</option>
+            <option value="Deprecated">Deprecated</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Technologies Used (SOFTWARE_TECHNOLOGY M:N)</label>
+          <div style="max-height: 120px; overflow-y: auto; border: 1px solid var(--border-color); padding: 8px; border-radius: var(--radius-sm); background: #ffffff;">
+            {% for tech in all_technologies %}
+              <label style="display: flex; align-items: center; gap: 8px; font-size: 12px; margin-bottom: 4px; cursor: pointer;">
+                <input type="checkbox" name="technologies" value="{{ tech.Technology_ID }}">
+                <span><strong>{{ tech.Technology_Name }}</strong> ({{ tech.Technology_Type }})</span>
+              </label>
+            {% endfor %}
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="edit_software_desc">Description</label>
+          <textarea id="edit_software_desc" name="description" class="form-control" rows="3"></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" onclick="closeModal('editSoftwareModal')">Cancel</button>
+        <button type="submit" class="btn btn-primary">Update Software</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

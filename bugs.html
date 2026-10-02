@@ -1,0 +1,204 @@
+{% extends "base.html" %}
+
+{% block title %}Bugs - Software Management System{% endblock %}
+{% block page_heading %}Bug & Defect Tracking{% endblock %}
+
+{% block content %}
+<div class="card">
+  <!-- Toolbar: Search & Filter & Add -->
+  <div class="toolbar-actions">
+    <form action="{{ url_for('bugs') }}" method="GET" class="search-form" style="max-width: 700px;">
+      <input type="text" name="search" class="form-control" placeholder="Search bugs by description or software..." value="{{ search }}" style="flex: 2;">
+      
+      <select name="severity" class="form-control" style="flex: 1;">
+        <option value="">All Severities</option>
+        <option value="Low" {% if severity_filter == 'Low' %}selected{% endif %}>Low</option>
+        <option value="Medium" {% if severity_filter == 'Medium' %}selected{% endif %}>Medium</option>
+        <option value="High" {% if severity_filter == 'High' %}selected{% endif %}>High</option>
+        <option value="Critical" {% if severity_filter == 'Critical' %}selected{% endif %}>Critical</option>
+      </select>
+
+      <select name="status" class="form-control" style="flex: 1;">
+        <option value="">All Statuses</option>
+        <option value="Open" {% if status_filter == 'Open' %}selected{% endif %}>Open</option>
+        <option value="In Progress" {% if status_filter == 'In Progress' %}selected{% endif %}>In Progress</option>
+        <option value="Resolved" {% if status_filter == 'Resolved' %}selected{% endif %}>Resolved</option>
+        <option value="Closed" {% if status_filter == 'Closed' %}selected{% endif %}>Closed</option>
+      </select>
+
+      <button type="submit" class="btn btn-primary btn-sm">Filter</button>
+      {% if search or severity_filter or status_filter %}
+        <a href="{{ url_for('bugs') }}" class="btn btn-secondary btn-sm">Reset</a>
+      {% endif %}
+    </form>
+
+    <button type="button" class="btn btn-primary" onclick="openModal('addBugModal')">
+      🐞 Report Bug
+    </button>
+  </div>
+
+  <!-- Bugs Table -->
+  <div class="table-responsive">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Software Application</th>
+          <th>Description</th>
+          <th>Severity</th>
+          <th>Status</th>
+          <th>Reported Date</th>
+          <th style="text-align: right;">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% if bugs %}
+          {% for b in bugs %}
+            <tr>
+              <td><code>#{{ b.Bug_ID }}</code></td>
+              <td><strong>{{ b.Software_Name }}</strong></td>
+              <td>{{ b.Description }}</td>
+              <td>
+                <span class="badge {% if b.Severity == 'Critical' %}badge-danger{% elif b.Severity == 'High' %}badge-danger{% elif b.Severity == 'Medium' %}badge-warning{% else %}badge-info{% endif %}">
+                  {{ b.Severity }}
+                </span>
+              </td>
+              <td>
+                <span class="badge {% if b.Status == 'Closed' or b.Status == 'Resolved' %}badge-success{% elif b.Status == 'In Progress' %}badge-warning{% else %}badge-danger{% endif %}">
+                  {{ b.Status }}
+                </span>
+              </td>
+              <td style="white-space: nowrap;">{{ b.Reported_Date }}</td>
+              <td style="text-align: right;">
+                <div class="action-buttons" style="justify-content: flex-end;">
+                  <button type="button" class="btn btn-secondary btn-sm"
+                          onclick="populateEditBug({{ b.Bug_ID }}, {{ b.Software_ID }}, '{{ b.Description | replace('\'', '\\\'') }}', '{{ b.Severity }}', '{{ b.Status }}', '{{ b.Reported_Date }}')">
+                    ✏️ Edit
+                  </button>
+                  <form action="{{ url_for('delete_bug', id=b.Bug_ID) }}" method="POST" style="display: inline;"
+                        onsubmit="return confirmDelete('Bug', '#{{ b.Bug_ID }}');">
+                    <button type="submit" class="btn btn-danger btn-sm">🗑️ Delete</button>
+                  </form>
+                </div>
+              </td>
+            </tr>
+          {% endfor %}
+        {% else %}
+          <tr>
+            <td colspan="7" class="empty-state">No bugs matching criteria found. Click "Report Bug" to log an issue.</td>
+          </tr>
+        {% endif %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Modal: Add Bug -->
+<div id="addBugModal" class="modal-overlay">
+  <div class="modal-dialog">
+    <div class="modal-header">
+      <h3>Report New Bug</h3>
+      <button type="button" class="modal-close" onclick="closeModal('addBugModal')">&times;</button>
+    </div>
+    <form action="{{ url_for('add_bug') }}" method="POST">
+      <div class="modal-body">
+        <div class="form-group">
+          <label class="form-label" for="add_b_software">Software Application *</label>
+          <select id="add_b_software" name="software_id" class="form-control" required>
+            <option value="">-- Select Software --</option>
+            {% for s in software_list %}
+              <option value="{{ s.Software_ID }}">{{ s.Software_Name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="add_b_desc">Defect Description *</label>
+          <textarea id="add_b_desc" name="description" class="form-control" rows="3" required placeholder="Describe steps to reproduce, expected vs actual behavior..."></textarea>
+        </div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+          <div class="form-group">
+            <label class="form-label" for="add_b_severity">Severity *</label>
+            <select id="add_b_severity" name="severity" class="form-control" required>
+              <option value="Low">Low</option>
+              <option value="Medium" selected>Medium</option>
+              <option value="High">High</option>
+              <option value="Critical">Critical</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="add_b_status">Status *</label>
+            <select id="add_b_status" name="status" class="form-control" required>
+              <option value="Open" selected>Open</option>
+              <option value="In Progress">In Progress</option>
+              <option value="Resolved">Resolved</option>
+              <option value="Closed">Closed</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="add_b_date">Reported Date *</label>
+          <input type="date" id="add_b_date" name="reported_date" class="form-control" required value="{{ today_date }}">
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" onclick="closeModal('addBugModal')">Cancel</button>
+        <button type="submit" class="btn btn-primary">File Bug Report</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Modal: Edit Bug -->
+<div id="editBugModal" class="modal-overlay">
+  <div class="modal-dialog">
+    <div class="modal-header">
+      <h3>Edit Bug Ticket</h3>
+      <button type="button" class="modal-close" onclick="closeModal('editBugModal')">&times;</button>
+    </div>
+    <form id="editBugForm" method="POST">
+      <div class="modal-body">
+        <div class="form-group">
+          <label class="form-label" for="edit_bug_software">Software Application *</label>
+          <select id="edit_bug_software" name="software_id" class="form-control" required>
+            {% for s in software_list %}
+              <option value="{{ s.Software_ID }}">{{ s.Software_Name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="edit_bug_desc">Description *</label>
+          <textarea id="edit_bug_desc" name="description" class="form-control" rows="3" required></textarea>
+        </div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+          <div class="form-group">
+            <label class="form-label" for="edit_bug_severity">Severity *</label>
+            <select id="edit_bug_severity" name="severity" class="form-control" required>
+              <option value="Low">Low</option>
+              <option value="Medium">Medium</option>
+              <option value="High">High</option>
+              <option value="Critical">Critical</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="edit_bug_status">Status *</label>
+            <select id="edit_bug_status" name="status" class="form-control" required>
+              <option value="Open">Open</option>
+              <option value="In Progress">In Progress</option>
+              <option value="Resolved">Resolved</option>
+              <option value="Closed">Closed</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="edit_bug_date">Reported Date *</label>
+          <input type="date" id="edit_bug_date" name="reported_date" class="form-control" required>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" onclick="closeModal('editBugModal')">Cancel</button>
+        <button type="submit" class="btn btn-primary">Update Bug</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

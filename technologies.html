@@ -1,0 +1,135 @@
+{% extends "base.html" %}
+
+{% block title %}Technologies - Software Management System{% endblock %}
+{% block page_heading %}Technology Stack Catalog{% endblock %}
+
+{% block content %}
+<div class="card">
+  <!-- Toolbar: Search & Add -->
+  <div class="toolbar-actions">
+    <form action="{{ url_for('technologies') }}" method="GET" class="search-form">
+      <input type="text" name="search" class="form-control" placeholder="Search technologies by name, type, version..." value="{{ search }}">
+      <button type="submit" class="btn btn-primary btn-sm">Search</button>
+      {% if search %}
+        <a href="{{ url_for('technologies') }}" class="btn btn-secondary btn-sm">Clear</a>
+      {% endif %}
+    </form>
+    <button type="button" class="btn btn-primary" onclick="openModal('addTechModal')">
+      ➕ Add Technology
+    </button>
+  </div>
+
+  <!-- Technologies Table -->
+  <div class="table-responsive">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Technology Name</th>
+          <th>Type / Category</th>
+          <th>Version</th>
+          <th>Description</th>
+          <th style="text-align: right;">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% if technologies %}
+          {% for t in technologies %}
+            <tr>
+              <td><code>#{{ t.Technology_ID }}</code></td>
+              <td><strong>{{ t.Technology_Name }}</strong></td>
+              <td><span class="badge badge-secondary">{{ t.Technology_Type }}</span></td>
+              <td><span style="font-family: monospace;">{{ t.Version or '-' }}</span></td>
+              <td>{{ t.Description or '-' }}</td>
+              <td style="text-align: right;">
+                <div class="action-buttons" style="justify-content: flex-end;">
+                  <button type="button" class="btn btn-secondary btn-sm"
+                          onclick="populateEditTechnology({{ t.Technology_ID }}, '{{ t.Technology_Name | replace('\'', '\\\'') }}', '{{ t.Technology_Type | replace('\'', '\\\'') }}', '{{ (t.Version or '') | replace('\'', '\\\'') }}', '{{ (t.Description or '') | replace('\'', '\\\'') }}')">
+                    ✏️ Edit
+                  </button>
+                  <form action="{{ url_for('delete_technology', id=t.Technology_ID) }}" method="POST" style="display: inline;"
+                        onsubmit="return confirmDelete('Technology', '{{ t.Technology_Name | replace('\'', '\\\'') }}');">
+                    <button type="submit" class="btn btn-danger btn-sm">🗑️ Delete</button>
+                  </form>
+                </div>
+              </td>
+            </tr>
+          {% endfor %}
+        {% else %}
+          <tr>
+            <td colspan="6" class="empty-state">No technologies found. Click "Add Technology" to add a framework, language, or tool.</td>
+          </tr>
+        {% endif %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Modal: Add Technology -->
+<div id="addTechModal" class="modal-overlay">
+  <div class="modal-dialog">
+    <div class="modal-header">
+      <h3>Add New Technology</h3>
+      <button type="button" class="modal-close" onclick="closeModal('addTechModal')">&times;</button>
+    </div>
+    <form action="{{ url_for('add_technology') }}" method="POST">
+      <div class="modal-body">
+        <div class="form-group">
+          <label class="form-label" for="add_t_name">Technology Name *</label>
+          <input type="text" id="add_t_name" name="technology_name" class="form-control" required placeholder="e.g. Python, MySQL, React.js">
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="add_t_type">Technology Type / Category *</label>
+          <input type="text" id="add_t_type" name="technology_type" class="form-control" required placeholder="e.g. Programming Language, Web Framework, Relational DB">
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="add_t_version">Version</label>
+          <input type="text" id="add_t_version" name="version" class="form-control" placeholder="e.g. 3.11, 8.0, ES2023">
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="add_t_desc">Description</label>
+          <textarea id="add_t_desc" name="description" class="form-control" rows="3" placeholder="Technology features, purpose, notes..."></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" onclick="closeModal('addTechModal')">Cancel</button>
+        <button type="submit" class="btn btn-primary">Save Technology</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Modal: Edit Technology -->
+<div id="editTechnologyModal" class="modal-overlay">
+  <div class="modal-dialog">
+    <div class="modal-header">
+      <h3>Edit Technology</h3>
+      <button type="button" class="modal-close" onclick="closeModal('editTechnologyModal')">&times;</button>
+    </div>
+    <form id="editTechnologyForm" method="POST">
+      <div class="modal-body">
+        <div class="form-group">
+          <label class="form-label" for="edit_tech_name">Technology Name *</label>
+          <input type="text" id="edit_tech_name" name="technology_name" class="form-control" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="edit_tech_type">Technology Type *</label>
+          <input type="text" id="edit_tech_type" name="technology_type" class="form-control" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="edit_tech_version">Version</label>
+          <input type="text" id="edit_tech_version" name="version" class="form-control">
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="edit_tech_desc">Description</label>
+          <textarea id="edit_tech_desc" name="description" class="form-control" rows="3"></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" onclick="closeModal('editTechnologyModal')">Cancel</button>
+        <button type="submit" class="btn btn-primary">Update Technology</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}
